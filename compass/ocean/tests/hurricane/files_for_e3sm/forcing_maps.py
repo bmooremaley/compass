@@ -54,8 +54,8 @@ class ForcingMaps(Step):
         self.add_output_file(filename=f'{CFSR_LR}.scrip.nc')
         self.add_output_file(filename=f'{CFSR_HR}.scrip.nc')
         self.add_output_file(filename=f'{mesh_name}.scrip.nc')
-        self.add_output_file(filename=f"map_{CFSR_HR}_to_{CFSR_LR}_bilinear.nc")
-        self.add_output_file(filename=f"map_{CFSR_LR}_to_{mesh_name}_bilinear.nc")
+        self.add_output_file(filename=f"map_{CFSR_LR}_to_{CFSR_HR}_bilinear.nc")
+        self.add_output_file(filename=f"map_{CFSR_HR}_to_{mesh_name}_bilinear.nc")
 
         self._get_resources()
 
@@ -80,11 +80,11 @@ class ForcingMaps(Step):
 
         CFSR_LR = f'CFSR{_resolution(361, 720)}'
         CFSR_HR = f'CFSR{_resolution(880, 1760)}'
-        self._scrip_file_gridded(self, 'CFSR', 361, 720, 'cap', 'grn_ctr')
-        self._scrip_file_gridded(self, 'CFSR', 880, 1760, 'gss', 'grn_ctr')
+        self._scrip_file_gridded('CFSR', 361, 720, 'gss', 'grn_ctr') # Check this
+        self._scrip_file_gridded('CFSR', 880, 1760, 'gss', 'grn_ctr')
         self._scrip_file_MPAS()
-        self._create_weights(CFSR_HR, CFSR_LR)
-        self._create_weights(CFSR_LR, self.mesh.name)
+        self._create_weights(CFSR_LR, CFSR_HR)
+        self._create_weights(CFSR_HR, self.mesh.name)
     
     def _get_resources(self):
         """

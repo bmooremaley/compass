@@ -31,7 +31,7 @@ class FilesForE3SM(TestCase):
         subdir = os.path.join(mesh.mesh_name, name)
         super().__init__(test_group=test_group, name=name, subdir=subdir)
         self.mesh = mesh
-        self.add_step(ForcingMaps(test_case=self, mesh=mesh))
+        self.add_step(ForcingMaps(test_case=self))
 
     def configure(self):
         """

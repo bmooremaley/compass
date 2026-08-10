@@ -48,13 +48,15 @@ class Mesh(TestCase):
         self.add_step(pixel_step)
 
         name = 'base_mesh'
+        preserve_floodplain = True
         if mesh_name == 'DEQU120at30cr10rr2':
+            preserve_floodplain = False
             base_mesh_step = DEQU120at30cr10rr2BaseMesh(
-                self, name=name, preserve_floodplain=False)
+                self, name=name, preserve_floodplain=preserve_floodplain)
             mesh_lower = 'dequ120at30cr10rr2'
         elif mesh_name == 'DEQU120at30cr10rr2WD':
             base_mesh_step = DEQU120at30cr10rr2BaseMesh(
-                self, name=name, preserve_floodplain=True)
+                self, name=name, preserve_floodplain=preserve_floodplain)
             mesh_lower = 'dequ120at30cr10rr2'
         elif mesh_name == 'DEVR45to5rr1':
             base_mesh_step = DEVR45to5rr1BaseMesh(
@@ -84,7 +86,8 @@ class Mesh(TestCase):
         cull_mesh_step = CullMeshStep(
             test_case=self, base_mesh_step=base_mesh_step,
             with_ice_shelf_cavities=True,
-            preserve_floodplain=True, unsmoothed_topo=remap_step)
+            preserve_floodplain=preserve_floodplain,
+            unsmoothed_topo=remap_step)
 
         self.add_step(cull_mesh_step)
 

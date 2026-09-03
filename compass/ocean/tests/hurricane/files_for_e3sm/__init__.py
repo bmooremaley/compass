@@ -2,6 +2,7 @@ import os
 
 from compass.ocean.tests.hurricane.configure import configure_hurricane
 from compass.ocean.tests.hurricane.files_for_e3sm.forcing_maps import ForcingMaps
+from compass.ocean.tests.hurricane.files_for_e3sm.domain_files import DomainFiles
 from compass.testcase import TestCase
 
 
@@ -32,6 +33,7 @@ class FilesForE3SM(TestCase):
         super().__init__(test_group=test_group, name=name, subdir=subdir)
         self.mesh = mesh
         self.add_step(ForcingMaps(test_case=self))
+        self.add_step(DomainFiles(test_case=self))
 
     def configure(self):
         """

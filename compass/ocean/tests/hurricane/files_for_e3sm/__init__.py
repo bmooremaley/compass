@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from compass.ocean.tests.hurricane.configure import configure_hurricane
 from compass.ocean.tests.hurricane.files_for_e3sm.forcing_maps import ForcingMaps
@@ -32,6 +33,7 @@ class FilesForE3SM(TestCase):
         subdir = os.path.join(mesh.mesh_name, name)
         super().__init__(test_group=test_group, name=name, subdir=subdir)
         self.mesh = mesh
+        self.creation_date = datetime.now().strftime('%Y%m%d')
         self.add_step(ForcingMaps(test_case=self))
         self.add_step(DomainFiles(test_case=self))
 

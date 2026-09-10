@@ -27,6 +27,7 @@ class ForcingMaps(Step):
         """
         super().__init__(test_case, name='forcing_maps')
         self.mesh = test_case.mesh
+        self.creation_date = test_case.creation_date
 
     def setup(self):
         """
@@ -35,12 +36,21 @@ class ForcingMaps(Step):
         """
         super().setup()
 
+        atm_grid = self.config.get('files_for_e3sm', 'atm_grid')
+        ocn_grid = self.mesh.mesh_name
         mesh_path = self.mesh.steps['cull_mesh'].path
-        self.add_input_file(filename='mesh.nc', work_dir_target=f'{mesh_path}/culled_mesh.nc')
-        self.add_output_file(filename='map_atm_to_ocn_trbilin.nc')
-        self.add_output_file(filename='map_atm_to_ocn_traave.nc')
-        self.add_output_file(filename='map_ocn_to_atm_trbilin.nc')
-        self.add_output_file(filename='map_ocn_to_atm_traave.nc')
+        creation_date = self.creation_date
+
+        self.add_input_file(
+            filename='mesh.nc', work_dir_target=f'{mesh_path}/culled_mesh.nc')
+        self.add_output_file(
+            filename=f'map_{atm_grid}_to_{ocn_grid}_trbilin.{creation_date}.nc')
+        self.add_output_file(
+            filename=f'map_{atm_grid}_to_{ocn_grid}_traave.{creation_date}.nc')
+        self.add_output_file(
+            filename=f'map_{ocn_grid}_to_{atm_grid}_trbilin.{creation_date}.nc')
+        self.add_output_file(
+            filename=f'map_{ocn_grid}_to_{atm_grid}_traave.{creation_date}.nc')
 
         self._get_resources()
 
@@ -63,14 +73,17 @@ class ForcingMaps(Step):
         """
         super().run()
 
+        atm_grid = self.config.get('files_for_e3sm', 'atm_grid')
+        ocn_grid = self.mesh.mesh_name
+
         self._scrip_file_gridded()
         self._scrip_file_MPAS()
-        self._partition_scrip_file('atm')
-        self._partition_scrip_file('ocn')
-        self._create_weights('atm', 'ocn', 'trbilin')
-        self._create_weights('atm', 'ocn', 'traave')
-        self._create_weights('ocn', 'atm', 'trbilin')
-        self._create_weights('ocn', 'atm', 'traave')
+        self._partition_scrip_file(atm_grid)
+        self._partition_scrip_file(ocn_grid)
+        self._create_weights(atm_grid, ocn_grid, 'trbilin')
+        self._create_weights(atm_grid, ocn_grid, 'traave')
+        self._create_weights(ocn_grid, atm_grid, 'trbilin')
+        self._create_weights(ocn_grid, atm_grid, 'traave')
 
     def _get_resources(self):
         """
@@ -108,7 +121,7 @@ class ForcingMaps(Step):
         args = [
             'ncremap',
             '-G', f'latlon={nlat},{nlon}#lat_typ={lat_typ}#lon_typ={lon_typ}',
-            '-g', 'atm.scrip.nc',
+            '-g', f'{grid_name}.scrip.nc',
         ]
         check_call(args, logger)
 
@@ -118,30 +131,30 @@ class ForcingMaps(Step):
         """
         Create SCRIP file from MPAS mesh file.
         """
-        mesh_name = self.mesh.mesh_name
+        grid_name = self.mesh.mesh_name
         logger = self.logger
-        logger.info(f'Create MPAS SCRIP file for {mesh_name} mesh')
+        logger.info(f'Create MPAS SCRIP file for {grid_name} mesh')
 
         descriptor = MpasCellMeshDescriptor(
             filename='mesh.nc',
-            mesh_name=mesh_name,
+            mesh_name=grid_name,
         )
-        descriptor.to_scrip('ocn.scrip.nc')
+        descriptor.to_scrip(f'{grid_name}.scrip.nc')
 
         logger.info('  Done.')
 
-    def _partition_scrip_file(self, src):
+    def _partition_scrip_file(self, grid_name):
         """
         Partition SCRIP file for parallel mbtempest use
         """
         logger = self.logger
-        logger.info(f'Partition SCRIP file for {src}')
+        logger.info(f'Partition SCRIP file for {grid_name}')
 
         # Convert source SCRIP to mbtempest
         args = [
             'mbconvert', '-B',
-            f'{src}.scrip.nc',
-            f'{src}.scrip.h5m',
+            f'{grid_name}.scrip.nc',
+            f'{grid_name}.scrip.h5m',
         ]
         # run in "parallel" with one task and one thread for Intel-MPI support
         run_command(args, 1, 1, 1, self.config, logger)
@@ -150,8 +163,8 @@ class ForcingMaps(Step):
         args = [
             'mbpart', f'{self.ntasks}',
             '-z', 'RCB',
-            f'{src}.scrip.h5m',
-            f'{src}.scrip.p{self.ntasks}.h5m',
+            f'{grid_name}.scrip.h5m',
+            f'{grid_name}.scrip.p{self.ntasks}.h5m',
         ]
         # run in "parallel" with one task and one thread for Intel-MPI support
         run_command(args, 1, 1, 1, self.config, logger)
@@ -170,7 +183,7 @@ class ForcingMaps(Step):
 
         src_file = f'{src}.scrip.p{self.ntasks}.h5m'
         tgt_file = f'{tgt}.scrip.p{self.ntasks}.h5m'
-        map_file = f'map_{src}_to_{tgt}_{method}.nc'
+        map_file = f'map_{src}_to_{tgt}_{method}.{self.creation_date}.nc'
 
         # Build weights file
         args = [

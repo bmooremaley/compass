@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 
 from mpas_tools.logging import check_call
 
@@ -28,6 +27,7 @@ class DomainFiles(Step):
         """
         super().__init__(test_case, name='domain_files')
         self.mesh = test_case.mesh
+        self.creation_date = test_case.creation_date
 
     def setup(self):
         """
@@ -35,21 +35,23 @@ class DomainFiles(Step):
         dependencies.
         """
         super().setup()
-        date_stamp = datetime.now().strftime('%Y%m%d')
-        self.date_stamp = date_stamp
-
-        fname = 'map_ocn_to_atm_traave.nc'
-        target = os.path.join(self.test_case.steps['forcing_maps'].path, fname)
-        self.add_input_file(filename=fname, work_dir_target=target)
 
         atm_grid = self.config.get('files_for_e3sm', 'atm_grid')
         ocn_grid = self.mesh.mesh_name
+        creation_date = self.creation_date
+
+        map_file_path = os.path.join(
+            self.test_case.steps['forcing_maps'].path,
+            f'map_{ocn_grid}_to_{atm_grid}_traave.{creation_date}.nc',
+        )
+        self.add_input_file(
+            filename='map_ocn_to_atm_traave.nc', work_dir_target=map_file_path)
         self.add_output_file(
-            filename=f'domain.lnd.{atm_grid}_{ocn_grid}.{date_stamp}.nc')
+            filename=f'domain.lnd.{atm_grid}_{ocn_grid}.{creation_date}.nc')
         self.add_output_file(
-            filename=f'domain.ocn.{atm_grid}_{ocn_grid}.{date_stamp}.nc')
+            filename=f'domain.ocn.{atm_grid}_{ocn_grid}.{creation_date}.nc')
         self.add_output_file(
-            filename=f'domain.ocn.{ocn_grid}.{date_stamp}.nc')
+            filename=f'domain.ocn.{ocn_grid}.{creation_date}.nc')
 
     def run(self):
         """
@@ -75,7 +77,7 @@ class DomainFiles(Step):
 
         args = [
             'python', domain_files_exe,
-            '--date-stamp', self.date_stamp,
+            '--date-stamp', self.creation_date,
             '-m', 'map_ocn_to_atm_traave.nc',
             '-o', ocn_grid,
             '-l', atm_grid,

@@ -2,8 +2,12 @@ import os
 from datetime import datetime
 
 from compass.ocean.tests.hurricane.configure import configure_hurricane
-from compass.ocean.tests.hurricane.files_for_e3sm.forcing_maps import ForcingMaps
-from compass.ocean.tests.hurricane.files_for_e3sm.domain_files import DomainFiles
+from compass.ocean.tests.hurricane.files_for_e3sm.domain_files import (
+    DomainFiles,
+)
+from compass.ocean.tests.hurricane.files_for_e3sm.forcing_maps import (
+    ForcingMaps,
+)
 from compass.testcase import TestCase
 
 

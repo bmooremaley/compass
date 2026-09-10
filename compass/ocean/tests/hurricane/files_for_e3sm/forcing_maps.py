@@ -39,18 +39,18 @@ class ForcingMaps(Step):
         atm_grid = self.config.get('files_for_e3sm', 'atm_grid')
         ocn_grid = self.mesh.mesh_name
         mesh_path = self.mesh.steps['cull_mesh'].path
-        creation_date = self.creation_date
+        create_date = self.creation_date
 
         self.add_input_file(
             filename='mesh.nc', work_dir_target=f'{mesh_path}/culled_mesh.nc')
         self.add_output_file(
-            filename=f'map_{atm_grid}_to_{ocn_grid}_trbilin.{creation_date}.nc')
+            filename=f'map_{atm_grid}_to_{ocn_grid}_trbilin.{create_date}.nc')
         self.add_output_file(
-            filename=f'map_{atm_grid}_to_{ocn_grid}_traave.{creation_date}.nc')
+            filename=f'map_{atm_grid}_to_{ocn_grid}_traave.{create_date}.nc')
         self.add_output_file(
-            filename=f'map_{ocn_grid}_to_{atm_grid}_trbilin.{creation_date}.nc')
+            filename=f'map_{ocn_grid}_to_{atm_grid}_trbilin.{create_date}.nc')
         self.add_output_file(
-            filename=f'map_{ocn_grid}_to_{atm_grid}_traave.{creation_date}.nc')
+            filename=f'map_{ocn_grid}_to_{atm_grid}_traave.{create_date}.nc')
 
         self._get_resources()
 

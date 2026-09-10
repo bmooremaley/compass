@@ -1,7 +1,7 @@
+from compass.ocean.tests.hurricane.files_for_e3sm import FilesForE3SM
 from compass.ocean.tests.hurricane.forward import Forward
 from compass.ocean.tests.hurricane.init import Init
 from compass.ocean.tests.hurricane.mesh import Mesh
-from compass.ocean.tests.hurricane.files_for_e3sm import FilesForE3SM
 from compass.testgroup import TestGroup
 
 

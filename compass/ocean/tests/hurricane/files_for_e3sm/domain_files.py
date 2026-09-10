@@ -85,4 +85,3 @@ class DomainFiles(Step):
         check_call(args, logger)
 
         logger.info('  Done.')
-

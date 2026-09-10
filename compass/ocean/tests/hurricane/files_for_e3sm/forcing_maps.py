@@ -37,10 +37,10 @@ class ForcingMaps(Step):
 
         mesh_path = self.mesh.steps['cull_mesh'].path
         self.add_input_file(filename='mesh.nc', work_dir_target=f'{mesh_path}/culled_mesh.nc')
-        self.add_output_file(filename='map_atm_to_ocn_bilinear.nc')
-        self.add_output_file(filename='map_atm_to_ocn_conserve.nc')
-        self.add_output_file(filename='map_ocn_to_atm_bilinear.nc')
-        self.add_output_file(filename='map_ocn_to_atm_conserve.nc')
+        self.add_output_file(filename='map_atm_to_ocn_trbilin.nc')
+        self.add_output_file(filename='map_atm_to_ocn_traave.nc')
+        self.add_output_file(filename='map_ocn_to_atm_trbilin.nc')
+        self.add_output_file(filename='map_ocn_to_atm_traave.nc')
 
         self._get_resources()
 
@@ -65,10 +65,12 @@ class ForcingMaps(Step):
 
         self._scrip_file_gridded()
         self._scrip_file_MPAS()
-        self._create_weights('atm', 'ocn', 'bilinear')
-        self._create_weights('atm', 'ocn', 'conserve')
-        self._create_weights('ocn', 'atm', 'bilinear')
-        self._create_weights('ocn', 'atm', 'conserve')
+        self._partition_scrip_file('atm')
+        self._partition_scrip_file('ocn')
+        self._create_weights('atm', 'ocn', 'trbilin')
+        self._create_weights('atm', 'ocn', 'traave')
+        self._create_weights('ocn', 'atm', 'trbilin')
+        self._create_weights('ocn', 'atm', 'traave')
 
     def _get_resources(self):
         """
@@ -128,26 +130,71 @@ class ForcingMaps(Step):
 
         logger.info('  Done.')
 
-    def _create_weights(self, src, tgt, method):
+    def _partition_scrip_file(self, src):
         """
-        Create mapping weights file using ESMF_RegridWeightGen
+        Partition SCRIP file for parallel mbtempest use
         """
         logger = self.logger
-        logger.info(f'Create {src}_to_{tgt} weights file')
+        logger.info(f'Partition SCRIP file for {src}')
 
+        # Convert source SCRIP to mbtempest
         args = [
-            'ESMF_RegridWeightGen',
-            '--source', f'{src}.scrip.nc',
-            '--destination', f'{tgt}.scrip.nc',
-            '--weight', f'map_{src}_to_{tgt}_{method}.nc',
-            '--method', method,
-            '--netcdf4',
-            '--ignore_unmapped',
+            'mbconvert', '-B',
+            f'{src}.scrip.nc',
+            f'{src}.scrip.h5m',
         ]
+        # run in "parallel" with one task and one thread for Intel-MPI support
+        run_command(args, 1, 1, 1, self.config, logger)
 
+        # Partition source SCRIP
+        args = [
+            'mbpart', f'{self.ntasks}',
+            '-z', 'RCB',
+            f'{src}.scrip.h5m',
+            f'{src}.scrip.p{self.ntasks}.h5m',
+        ]
+        # run in "parallel" with one task and one thread for Intel-MPI support
+        run_command(args, 1, 1, 1, self.config, logger)
+
+        logger.info('  Done.')
+
+    def _create_weights(self, src, tgt, method):
+        """
+        Create mapping weights file using TempestRemap
+        """
+        logger = self.logger
+        logger.info('Create weights file')
+
+        if method not in ['traave', 'trbilin']:
+            raise ValueError(f'Unsupported regridding method {method}')
+
+        src_file = f'{src}.scrip.p{self.ntasks}.h5m'
+        tgt_file = f'{tgt}.scrip.p{self.ntasks}.h5m'
+        map_file = f'map_{src}_to_{tgt}_{method}.nc'
+
+        # Build weights file
+        args = [
+            'mbtempest', '--type', '5', '--weights',
+            '--load', src_file,
+            '--load', tgt_file,
+            '--file', map_file,
+            '--method', 'fv', '--order', '1',
+            '--method', 'fv', '--order', '1',
+        ]
+        if method == 'trbilin':
+            args.extend(['--fvmethod', 'bilin'])
         run_command(
             args, self.cpus_per_task, self.ntasks,
             self.openmp_threads, self.config, self.logger,
         )
+
+        # Add attributes required by `generate_domain_files_E3SM.py`
+        args = [
+            'ncatted', '-O',
+            '-a', f'grid_file_src,global,o,c,{src_file}',
+            '-a', f'grid_file_dst,global,o,c,{tgt_file}',
+            map_file,
+        ]
+        check_call(args, logger)
 
         logger.info('  Done.')

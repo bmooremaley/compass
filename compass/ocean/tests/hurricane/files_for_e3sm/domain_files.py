@@ -38,7 +38,7 @@ class DomainFiles(Step):
         date_stamp = datetime.now().strftime('%Y%m%d')
         self.date_stamp = date_stamp
 
-        fname = 'map_ocn_to_atm_conserve.nc'
+        fname = 'map_ocn_to_atm_traave.nc'
         target = os.path.join(self.test_case.steps['forcing_maps'].path, fname)
         self.add_input_file(filename=fname, work_dir_target=target)
 
@@ -76,7 +76,7 @@ class DomainFiles(Step):
         args = [
             'python', domain_files_exe,
             '--date-stamp', self.date_stamp,
-            '-m', 'map_ocn_to_atm_conserve.nc',
+            '-m', 'map_ocn_to_atm_traave.nc',
             '-o', ocn_grid,
             '-l', atm_grid,
         ]

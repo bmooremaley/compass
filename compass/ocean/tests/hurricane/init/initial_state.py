@@ -320,13 +320,30 @@ class InitialState(Step):
         init["landIceFraction"][0, lat_mask] = (icep[lat_mask] > 0.)
         init["landIceFloatingFraction"][0, lat_mask] = (icep[lat_mask] > 0.)
 
-        init["bottomDepth"][lat_mask] = botd[lat_mask]
+        # Cells with subgrid lookup tables already have bottomDepth (subgrid
+        # mean bathymetry), layerThickness (wet volume per unit area) and ssh
+        # (table lookup) set consistently by MPAS init mode. Overwriting them
+        # with the linear relation layerThickness = ssh + bottomDepth puts the
+        # initial state out of balance with the tables. Only reset cells
+        # without subgrid coverage.
+        state_mask = np.zeros(init.dimensions["nCells"].size, dtype=bool)
+        state_mask[lat_mask] = True
+        if self.wetdry == 'subgrid':
+            sshRange = init["subgridSshCellTableRange"][:, 1]
+            has_subgrid = np.abs(sshRange + 1.0e10) > 1.0e-9
+            print(f"Preserving init-mode state in {has_subgrid.sum()} "
+                  f"subgrid cells")
+            state_mask &= ~has_subgrid
+        state_mask = np.where(state_mask)[0]
+
+        init["bottomDepth"][state_mask] = botd[state_mask]
         ssh = init["ssh"][:]
-        ssh[0, lat_mask] = ossh[lat_mask]
+        ssh[0, state_mask] = ossh[state_mask]
         init["ssh"][:] = ssh
 
         layerThickness = init["layerThickness"][:]
-        layerThickness[0, lat_mask, 0] = ossh[lat_mask] + botd[lat_mask]
+        layerThickness[0, state_mask, 0] = (ossh[state_mask] +
+                                            botd[state_mask])
         init["layerThickness"][:] = layerThickness
 
         init.close()
